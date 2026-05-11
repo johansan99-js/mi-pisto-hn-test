@@ -486,12 +486,13 @@
           ${Object.keys(cm.rates).filter(c => c !== 'HNL').map(code => {
             const info = cm.getCurrencyInfo(code) || {};
             const rate = cm.rates[code];
+            const rateVal = (rate && typeof rate === 'object') ? (rate.mid || rate.ask || rate.bid || 0) : (rate || 0);
             return `
               <div class="rate-pretty">
                 <span class="rate-pretty-flag">${info.flag || ''}</span>
                 <span class="rate-pretty-text">
                   <strong>1 ${code}</strong> =
-                  <span style="color:var(--amber);font-weight:800">L. ${rate.toFixed(4)}</span>
+                  <span style="color:var(--amber);font-weight:800">L. ${Number(rateVal).toFixed(4)}</span>
                 </span>
               </div>
             `;
