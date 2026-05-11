@@ -138,7 +138,62 @@ let state = {
 // Función auxiliar: cargar y descifrar state con la DEK de sesión
 // ────────────────────────────────────────────────────────────────────
 
-// ── uid ──────────────────────────────────────────────────────────────
+let mainChart = null;
+// P0-1: appPIN almacena el HASH (no el PIN en crudo)
+let appPIN = localStorage.getItem('finanzas_pin_hash') || '';
+try { localStorage.removeItem('finanzas_recordar'); } catch(e) {}
+let recordarPIN = false;
+
+// ─── MULTIMONEDA: fL delega en currencyManager si existe ─────────────
+const fL = n => {
+  if (window.currencyManager && typeof window.currencyManager.formatFromBase === 'function') {
+    return window.currencyManager.formatFromBase(Number(n) || 0);
+  }
+  return 'L. ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 });
+};
+
+// ─── Escape HTML (cierra superficie XSS) ─────────────────────────────
+const esc = s => String(s ?? '').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ─── Validación de IDs en runtime ────────────────────────────────────
+const _idRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$|^[a-z0-9_]{5,20}$/i;
+function _esIdSeguro(id) {
+  if (typeof id !== 'string') return false;
+  if (id.length > 50) return false;
+  return _idRegex.test(id);
+}
+function _conIdValidado(func, nombreFunc) {
+  return function(id, ...args) {
+    if (!_esIdSeguro(id)) {
+      console.error('⚠️ ID inválido bloqueado en ' + nombreFunc + ':', id);
+      alert('❌ Error de seguridad: ID inválido detectado.');
+      return;
+    }
+    return func(id, ...args);
+  };
+}
+window.addEventListener('DOMContentLoaded', () => {
+  ['abrirEdicionTx','softDeleteTx','openAbono','deleteMeta','editarMeta',
+   'abonarCobrar','editarCobrar','eliminarCobrar','abonarPagar','editarPagar',
+   'eliminarPagar','pagarCuotaPrestamo','editarPrestamo','eliminarPrestamo',
+   'pagarTarjeta','ajustarSaldoTarjeta','deleteTarjeta','marcarPagoRecurrente',
+   'editarRecurrente','eliminarRecurrente','verFactura'].forEach(nombre => {
+    if (typeof window[nombre] === 'function') {
+      window[nombre] = _conIdValidado(window[nombre], nombre);
+    }
+  });
+  console.log('🛡️ Protección XSS activa');
+}, { once: true });
+
+// ─── parseMonto: parseo estricto de montos ────────────────────────────
+function parseMonto(str) {
+  if (str === null || str === undefined) return null;
+  const s = String(str).trim().replace(',', '.');
+  if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
+  const n = parseFloat(s);
+  if (!Number.isFinite(n) || n < 0 || n > 1e9) return null;
+  return Math.round(n * 100) / 100;
+}
 
 const uid = () => (typeof crypto !== 'undefined' && crypto.randomUUID)
   ? crypto.randomUUID()
