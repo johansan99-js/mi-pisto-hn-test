@@ -1,1 +1,0 @@
-# mi-pisto-hn-test
