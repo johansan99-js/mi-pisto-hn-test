@@ -1,0 +1,104 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Distribución / Compilación
+dist/
+dist-ssr/
+*.local
+build/
+out/
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+.env.prod.local
+*.vsix
+.vscode-test
+.vscode-test.log
+
+# OS
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+*.swo
+*~
+.~*
+
+# Archivos de sistema Mac
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Logs
+logs
+*.log
+log.txt
+
+# Testing
+coverage/
+.nyc_output/
+.mocha_output/
+
+# Desarrollo local
+.vite/
+.cache/
+.eslintcache
+.prettier*
+
+# Archivos sensibles
+*.key
+*.pem
+secrets.json
+config.local.js
+
+# Backup files
+*.backup
+*.bak
+*~
+
+# Temporal
+tmp/
+temp/
+.tmp/
+
+# Archivos grandes (imágenes, videos)
+*.zip
+*.tar
+*.gz
+*.rar
+
+# Ejecutables
+*.exe
+*.app
+
+# Sistemas de compilación
+.gradle/
+.parcel-cache
+
+# Otros
+.editorconfig
+.env.*.sh
+config/
