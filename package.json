@@ -1,0 +1,69 @@
+{
+  "name": "mi-pisto-hn",
+  "version": "1.0.0",
+  "description": "Gestión financiera personal para Honduras. 100% privado, 100% offline.",
+  "type": "module",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:crypto": "node --input-type=module -e \"import('./lib/crypto.js').then(m => m.runTests())\"",
+    "lint": "eslint . --ext .js,.jsx --fix --ignore-path .gitignore",
+    "format": "prettier --write \"**/*.{js,json,css,html,md}\"",
+    "update-rates": "node update-rates.js",
+    "generate-icons": "sharp resize 192 192 < icon.svg > icon-192.png && sharp resize 512 512 < icon.svg > icon-512.png"
+  },
+  "keywords": [
+    "finance",
+    "budgeting",
+    "pwa",
+    "offline",
+    "honduras",
+    "personal-finance",
+    "encryption"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4"
+  },
+  "devDependencies": {
+    "vitest": "^1.3.1",
+    "@vitest/ui": "^1.3.1",
+    "@vitest/coverage-v8": "^1.3.1",
+    "vite": "^5.1.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "sharp": "^0.33.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all",
+      "supports web-app"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version",
+      "last 1 edge version"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/johansan99-js/mi-pisto-hn.git"
+  },
+  "bugs": {
+    "url": "https://github.com/johansan99-js/mi-pisto-hn/issues"
+  },
+  "homepage": "https://github.com/johansan99-js/mi-pisto-hn#readme"
+}

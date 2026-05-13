@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <!-- Meta información básica -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <!-- PWA -->
+    <meta name="theme-color" content="#130507">
+    <meta name="description" content="Gestión financiera personal para Honduras. 100% privado, 100% offline.">
+    <meta name="keywords" content="finanzas, presupuesto, honduras, offline, privado">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Mi Pisto HN">
+    
+    <!-- Iconos -->
+    <link rel="icon" type="image/png" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- Open Graph (redes sociales) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Mi Pisto HN — Tu dinero, tu control">
+    <meta property="og:description" content="Gestión financiera 100% privada y offline para Honduras">
+    <meta property="og:image" content="./icon-512.png">
+    <meta property="og:url" content="https://johansan99-js.github.io/mi-pisto-hn/">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Mi Pisto HN">
+    <meta name="twitter:description" content="Gestión financiera offline para Honduras">
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="./css/style.css">
+    
+    <title>Mi Pisto HN — Tu dinero, tu control</title>
+    
+    <style>
+        /* Estilos mínimos para offline/carga rápida */
+        :root {
+            --color-primary: #FF6B35;
+            --color-secondary: #004E89;
+            --color-dark: #130507;
+            --color-light: #F7F5F0;
+            --color-border: #E8E8E8;
+            --color-success: #06D6A0;
+            --color-danger: #EF476F;
+            --color-warning: #FFD166;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 
+                         'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                         sans-serif;
+            background: var(--color-light);
+            color: var(--color-dark);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Fallback para JavaScript deshabilitado -->
+    <noscript>
+        <div style="padding: 20px; text-align: center; color: #d32f2f;">
+            <h1>⚠️ JavaScript Requerido</h1>
+            <p>Mi Pisto HN requiere JavaScript habilitado.</p>
+            <p>Por favor, habilita JavaScript en tu navegador.</p>
+        </div>
+    </noscript>
+
+    <!-- Contenedor principal -->
+    <div id="app" role="main" aria-label="Aplicación Mi Pisto HN">
+        <!-- Loading inicial -->
+        <div id="loading" class="container" style="text-align: center; padding-top: 40px;">
+            <div class="skeleton" style="height: 40px; border-radius: 4px; margin: 20px 0;"></div>
+            <div class="skeleton" style="height: 200px; border-radius: 4px; margin: 20px 0;"></div>
+            <p style="color: #666; margin-top: 20px;">Cargando aplicación...</p>
+        </div>
+    </div>
+
+    <!-- Modal para PIN (offline) -->
+    <div id="pin-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            <h2 style="margin-bottom: 20px; color: #130507;">Ingresa tu PIN</h2>
+            <input type="password" id="pin-input" placeholder="****" maxlength="8" style="width: 100%; padding: 10px; border: 2px solid #E8E8E8; border-radius: 4px; font-size: 18px; letter-spacing: 2px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px;">
+                <button id="pin-submit" style="flex: 1; padding: 10px; background: #FF6B35; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Ingresar</button>
+                <button id="pin-reset" style="flex: 1; padding: 10px; background: #E8E8E8; color: #130507; border: none; border-radius: 4px; cursor: pointer;">Limpiar</button>
+            </div>
+            <p id="pin-error" style="color: #EF476F; margin-top: 10px; font-size: 12px; display: none;"></p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Service Worker Registration -->
+    <script>
+        // Registrar Service Worker para funcionalidad offline
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('./sw.js', {
+                        scope: './'
+                    });
+                    console.log('✅ Service Worker registrado:', registration.scope);
+                    
+                    // Verificar actualizaciones
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('⏫ Nueva versión disponible');
+                                // Notificar al usuario (implementar UI update)
+                                window.dispatchEvent(new CustomEvent('sw-update-available'));
+                            }
+                        });
+                    });
+                } catch (error) {
+                    console.error('❌ Error registrando Service Worker:', error);
+                }
+            });
+        } else {
+            console.warn('⚠️ Service Worker no soportado en este navegador');
+        }
+    </script>
+
+    <!-- Módulo Principal (ES6) -->
+    <script type="module">
+        // ============================================
+        // IMPORTACIONES
+        // ============================================
+        import * as crypto from './lib/crypto.js';
+
+        // ============================================
+        // CONFIGURACIÓN GLOBAL
+        // ============================================
+        const CONFIG = {
+            APP_NAME: 'Mi Pisto HN',
+            VERSION: '1.0.0',
+            DB_NAME: 'mi-pisto-hn',
+            DB_VERSION: 1,
+            MAX_PIN_ATTEMPTS: 3,
+            SESSION_TIMEOUT: 30 * 60 * 1000 // 30 minutos
+        };
+
+        // Estado global
+        let appState = {
+            user: null,
+            pin: null,
+            isAuthenticated: false,
+            sessionStartTime: null,
+            db: null,
+            tasas: {}
+        };
+
+        // ============================================
+        // INDEXEDDB SETUP
+        // ============================================
+        class AppDatabase {
+            constructor(dbName, version) {
+                this.dbName = dbName;
+                this.version = version;
+                this.db = null;
+            }
+
+            async init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.dbName, this.version);
+
+                    request.onerror = () => reject(new Error('Error abriendo BD'));
+                    request.onsuccess = () => {
+                        this.db = request.result;
+                        console.log('✅ IndexedDB inicializado');
+                        resolve(this.db);
+                    };
+
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+
+                        // Crear object stores
+                        if (!db.objectStoreNames.contains('transactions')) {
+                            const store = db.createObjectStore('transactions', { keyPath: 'id' });
+                            store.createIndex('date', 'date', { unique: false });
+                            store.createIndex('category', 'category', { unique: false });
+                            console.log('✅ Object store "transactions" creado');
+                        }
+
+                        if (!db.objectStoreNames.contains('settings')) {
+                            db.createObjectStore('settings', { keyPath: 'key' });
+                            console.log('✅ Object store "settings" creado');
+                        }
+
+                        if (!db.objectStoreNames.contains('encrypted_backup')) {
+                            db.createObjectStore('encrypted_backup', { keyPath: 'timestamp' });
+                            console.log('✅ Object store "encrypted_backup" creado');
+                        }
+                    };
+                });
+            }
+
+            async get(storeName, key) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.get(key);
+
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+
+            async set(storeName, value) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.put(value);
+
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+
+            async getAll(storeName) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.getAll();
+
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+        }
+
+        // ============================================
+        // FUNCIONES DE AUTENTICACIÓN
+        // ============================================
+        async function initPINAuth() {
+            console.log('🔐 Inicializando autenticación con PIN');
+            
+            // Verificar si hay PIN guardado
+            const settings = await appState.db.get('settings', 'pin-enabled');
+            
+            if (!settings || !settings.value) {
+                // Primer uso: crear PIN
+                showPINSetupModal();
+            } else {
+                // PIN ya existe: pedir ingreso
+                showPINLoginModal();
+            }
+        }
+
+        function showPINSetupModal() {
+            const modal = document.getElementById('pin-modal');
+            const input = document.getElementById('pin-input');
+            const submitBtn = document.getElementById('pin-submit');
+            const errorDiv = document.getElementById('pin-error');
+            
+            input.placeholder = 'Crea tu PIN (4-6 dígitos)';
+            modal.style.display = 'flex';
+
+            submitBtn.onclick = async () => {
+                const pin = input.value.trim();
+
+                // Validar PIN
+                if (!/^\d{4,6}$/.test(pin)) {
+                    showError(errorDiv, 'PIN debe tener 4-6 dígitos');
+                    return;
+                }
+
+                try {
+                    // Guardar PIN (hasheado)
+                    const salt = crypto.generateSalt();
+                    const key = await crypto.deriveKeyFromPIN(pin, salt);
+                    
+                    await appState.db.set('settings', {
+                        key: 'pin-enabled',
+                        value: true,
+                        pin_hash_salt: Array.from(salt)
+                    });
+
+                    appState.pin = pin;
+                    appState.isAuthenticated = true;
+                    appState.sessionStartTime = Date.now();
+
+                    modal.style.display = 'none';
+                    console.log('✅ PIN configurado correctamente');
+                    
+                    await initApp();
+                } catch (error) {
+                    showError(errorDiv, 'Error configurando PIN: ' + error.message);
+                }
+            };
+        }
+
+        function showPINLoginModal() {
+            const modal = document.getElementById('pin-modal');
+            const input = document.getElementById('pin-input');
+            const submitBtn = document.getElementById('pin-submit');
+            const errorDiv = document.getElementById('pin-error');
+            let attempts = 0;
+
+            input.placeholder = 'Ingresa tu PIN';
+            modal.style.display = 'flex';
+
+            submitBtn.onclick = async () => {
+                const pin = input.value.trim();
+
+                if (!pin) {
+                    showError(errorDiv, 'Ingresa tu PIN');
+                    return;
+                }
+
+                attempts++;
+
+                try {
+                    // Verificar PIN (comparando derivación)
+                    const settings = await appState.db.get('settings', 'pin-enabled');
+                    const savedSalt = new Uint8Array(settings.pin_hash_salt);
+                    
+                    // Si se puede derivar correctamente, el PIN es válido
+                    await crypto.deriveKeyFromPIN(pin, savedSalt);
+
+                    appState.pin = pin;
+                    appState.isAuthenticated = true;
+                    appState.sessionStartTime = Date.now();
+
+                    modal.style.display = 'none';
+                    console.log('✅ Autenticación correcta');
+                    
+                    await initApp();
+                } catch (error) {
+                    const remaining = CONFIG.MAX_PIN_ATTEMPTS - attempts;
+                    if (remaining > 0) {
+                        showError(errorDiv, `PIN incorrecto. ${remaining} intentos restantes`);
+                        input.value = '';
+                    } else {
+                        showError(errorDiv, 'Máximo de intentos alcanzado. Recarga la página.');
+                        submitBtn.disabled = true;
+                    }
+                }
+            };
+        }
+
+        function showError(element, message) {
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+
+        // ============================================
+        // CARGA DE TASAS DE CAMBIO
+        // ============================================
+        async function loadExchangeRates() {
+            try {
+                const response = await fetch('./tasas.json');
+                const data = await response.json();
+                
+                // Verificar estructura correcta
+                if (!data.rates || !data.rates.USD) {
+                    throw new Error('Estructura de tasas incorrecta');
+                }
+
+                appState.tasas = data;
+                console.log('✅ Tasas de cambio cargadas:', data.rates.USD.mid);
+                return data;
+            } catch (error) {
+                console.error('❌ Error cargando tasas:', error);
+                // Usar tasas fallback
+                appState.tasas = {
+                    rates: {
+                        USD: { bid: 26.5965, ask: 26.7295, mid: 26.6630 },
+                        EUR: { bid: 30.8450, ask: 31.1550, mid: 31.0000 }
+                    }
+                };
+                return appState.tasas;
+            }
+        }
+
+        // ============================================
+        // INICIALIZACIÓN DE LA APP
+        // ============================================
+        async function initApp() {
+            console.log('🚀 Inicializando aplicación...');
+
+            // Ocultar loading
+            document.getElementById('loading').style.display = 'none';
+
+            // Crear contenido principal
+            const appContainer = document.getElementById('app');
+            appContainer.innerHTML = `
+                <div class="container">
+                    <header style="margin-bottom: 30px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h1 style="color: var(--color-dark);">💰 Mi Pisto HN</h1>
+                            <button id="menu-btn" style="background: var(--color-primary); color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer;">⚙️</button>
+                        </div>
+                    </header>
+
+                    <!-- Dashboard -->
+                    <section id="dashboard" style="margin-bottom: 30px;">
+                        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <h2 style="color: var(--color-dark); margin-bottom: 15px;">Balance Total</h2>
+                            <div style="font-size: 32px; color: var(--color-success); font-weight: bold;">
+                                L. <span id="total-balance">0.00</span>
+                            </div>
+                            <p style="color: #666; margin-top: 5px; font-size: 14px;">Actualizado: <span id="last-update">Ahora</span></p>
+                        </div>
+                    </section>
+
+                    <!-- Acciones rápidas -->
+                    <section id="quick-actions" style="margin-bottom: 30px;">
+                        <h2 style="color: var(--color-dark); margin-bottom: 15px;">Acciones Rápidas</h2>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                            <button id="btn-add-expense" style="padding: 15px; background: var(--color-danger); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">➕ Gasto</button>
+                            <button id="btn-add-income" style="padding: 15px; background: var(--color-success); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">➕ Ingreso</button>
+                            <button id="btn-reports" style="padding: 15px; background: var(--color-secondary); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">📊 Reportes</button>
+                            <button id="btn-export" style="padding: 15px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">💾 Exportar</button>
+                        </div>
+                    </section>
+
+                    <!-- Transacciones recientes -->
+                    <section id="recent-transactions">
+                        <h2 style="color: var(--color-dark); margin-bottom: 15px;">Transacciones Recientes</h2>
+                        <div id="transactions-list" style="background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <p style="padding: 20px; color: #999; text-align: center;">No hay transacciones</p>
+                        </div>
+                    </section>
+
+                    <!-- Indicador de estado offline -->
+                    <div id="offline-indicator" style="display: none; position: fixed; bottom: 20px; left: 20px; background: var(--color-warning); color: var(--color-dark); padding: 15px 20px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                        📡 Modo Offline
+                    </div>
+                </div>
+            `;
+
+            // Event listeners
+            document.getElementById('btn-add-expense')?.addEventListener('click', () => {
+                console.log('➕ Agregar gasto');
+                alert('Feature: Agregar gasto (implementar)');
+            });
+
+            document.getElementById('btn-add-income')?.addEventListener('click', () => {
+                console.log('➕ Agregar ingreso');
+                alert('Feature: Agregar ingreso (implementar)');
+            });
+
+            document.getElementById('btn-reports')?.addEventListener('click', () => {
+                console.log('📊 Reportes');
+                alert('Feature: Reportes (implementar)');
+            });
+
+            document.getElementById('btn-export')?.addEventListener('click', async () => {
+                console.log('💾 Exportar datos');
+                alert('Feature: Exportar (implementar)');
+            });
+
+            document.getElementById('menu-btn')?.addEventListener('click', () => {
+                alert('Feature: Menú de configuración (implementar)');
+            });
+
+            // Detectar estado online/offline
+            window.addEventListener('online', () => {
+                document.getElementById('offline-indicator').style.display = 'none';
+                console.log('🌐 Online');
+            });
+
+            window.addEventListener('offline', () => {
+                document.getElementById('offline-indicator').style.display = 'block';
+                console.log('📡 Offline');
+            });
+
+            console.log('✅ App inicializada correctamente');
+        }
+
+        // ============================================
+        // PUNTO DE ENTRADA
+        // ============================================
+        async function main() {
+            try {
+                console.log(`🎉 ${CONFIG.APP_NAME} v${CONFIG.VERSION}`);
+                console.log('🔐 Verificando disponibilidad de Web Crypto API...');
+                
+                if (!crypto.isCryptoAvailable()) {
+                    throw new Error('Web Crypto API no disponible');
+                }
+                console.log('✅ Web Crypto API disponible');
+
+                // Inicializar BD
+                const db = new AppDatabase(CONFIG.DB_NAME, CONFIG.DB_VERSION);
+                appState.db = await db.init();
+
+                // Cargar tasas
+                await loadExchangeRates();
+
+                // Iniciar autenticación PIN
+                await initPINAuth();
+
+            } catch (error) {
+                console.error('❌ Error fatal:', error);
+                document.getElementById('app').innerHTML = `
+                    <div class="container" style="padding-top: 40px; text-align: center;">
+                        <h1 style="color: var(--color-danger);">❌ Error Iniciando App</h1>
+                        <p>${error.message}</p>
+                        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: var(--color-primary); color: white; border: none; border-radius: 4px; cursor: pointer;">Reintentar</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Ejecutar cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', main);
+        } else {
+            main();
+        }
+
+        // Exportar funciones para debugging
+        window.appDebug = {
+            state: appState,
+            config: CONFIG,
+            crypto,
+            runTests: () => crypto.runTests()
+        };
+        
+        console.log('💡 Debug: window.appDebug.runTests() para ejecutar tests crypto');
+    </script>
+</body>
+</html>
