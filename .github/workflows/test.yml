@@ -1,0 +1,149 @@
+name: Tests & Deploy
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Lint code
+      run: npm run lint --if-present
+      continue-on-error: true
+    
+    - name: Run unit tests
+      run: npm run test
+    
+    - name: Run crypto tests
+      run: npm run test:crypto
+    
+    - name: Build project
+      run: npm run build
+    
+    - name: Check Security
+      run: |
+        # Verificar que .env.local no está commiteado
+        if [ -f ".env.local" ]; then
+          echo "❌ ERROR: .env.local encontrado en el repositorio!"
+          exit 1
+        fi
+        echo "✅ .env.local no está expuesto"
+    
+    - name: Verify manifest.json
+      run: |
+        if ! command -v jq &> /dev/null; then
+          npm install -g jq
+        fi
+        jq . manifest.json > /dev/null && echo "✅ manifest.json válido" || (echo "❌ manifest.json inválido" && exit 1)
+    
+    - name: Verify tasas.json
+      run: |
+        jq . tasas.json > /dev/null && echo "✅ tasas.json válido" || (echo "❌ tasas.json inválido" && exit 1)
+    
+    - name: Upload coverage (if available)
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage/
+        if-no-files-found: ignore
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Build
+      run: npm run build
+    
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./dist
+        cname: johansan99-js.github.io
+
+  security-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+    
+    - name: Check for secrets
+      run: |
+        # Verificar que no hay secretos commiteados
+        if grep -r "SUPABASE_KEY\|ANON_KEY\|API_KEY" . --include="*.json" --include="*.js" --include="*.html" --exclude-dir=node_modules --exclude-dir=.git; then
+          echo "⚠️ Posibles secretos encontrados - revisar"
+          exit 0
+        fi
+        echo "✅ No se encontraron secretos expuestos"
+    
+    - name: Verify .gitignore
+      run: |
+        if grep -q ".env.local" .gitignore; then
+          echo "✅ .env.local está protegido en .gitignore"
+        else
+          echo "❌ ERROR: .env.local no está en .gitignore"
+          exit 1
+        fi
+    
+    - name: Check file structure
+      run: |
+        # Verificar estructura esperada
+        files=(
+          "index.html"
+          "offline.html"
+          "manifest.json"
+          "tasas.json"
+          "package.json"
+          ".gitignore"
+          "README.md"
+          "lib/crypto.js"
+        )
+        
+        for file in "${files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "❌ Archivo faltante: $file"
+            exit 1
+          fi
+        done
+        echo "✅ Estructura de archivos correcta"
